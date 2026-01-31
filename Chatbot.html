@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disease Prediction Chatbot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+        }
+        .chatbot-container {
+            width: 100%;
+            max-width: 400px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .name-setup {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+            text-align: center;
+        }
+        .name-setup h1 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+        .name-setup input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .name-setup button {
+            padding: 10px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .name-setup button:hover {
+            background: #357abd;
+        }
+        .chat-interface {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+        .chat-header {
+            background: #4a90e2;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+        }
+        .chat-window, .history-window {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .chat-window { display: flex; }
+        .history-window { display: none; }
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            align-self: flex-end;
+            background: #4a90e2;
+            color: white;
+        }
+        .message.bot {
+            align-self: flex-start;
+            background: #f1f1f1;
+            color: #333;
+        }
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: #f1f1f1;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-style: italic;
+            color: #666;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        .input-area {
+            padding: 15px;
+            background: #f9f9f9;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        .input-area button {
+            padding: 10px 20px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .input-area button:hover {
+            background: #357abd;
+        }
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            gap: 10px;
+        }
+        .history-item {
+            background: #f1f1f1;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .chart-container {
+            height: 200px;
+            margin-top: 10px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <!-- Name Setup Screen -->
+        <div class="name-setup" id="name-setup">
+            <h1>🩺 Welcome to Disease Prediction Chatbot</h1>
+            <p>Please enter your name to get started.</p>
+            <input type="text" id="name-input" placeholder="Enter your name..." maxlength="20">
+            <button onclick="setName()">Start Chatting</button>
+        </div>
+
+        <!-- Chat Interface (Hidden Initially) -->
+        <div class="chat-interface" id="chat-interface">
+            <div class="chat-header">
+                🩺 Disease Prediction Chatbot
+                <button class="toggle-btn" id="toggle-view">View History</button>
+            </div>
+            <div class="chat-window" id="chat-window">
+                <div class="message bot" id="greeting-message">
+                    Hello! Describe your symptoms (e.g., "I have fever and headache"), and I'll predict a possible disease with precautions.
+                </div>
+            </div>
+            <div class="history-window" id="history-window">
+                <div class="history-list" id="history-list">
+                    <!-- History items populated here -->
+                </div>
+                <div class="chart-container">
+                    <canvas id="symptomsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="diseasesChart"></canvas>
+                </div>
+            </div>
+            <div class="input-area" id="input-area">
+                <input type="text" id="user-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+            <div class="typing-indicator" id="typing-indicator">
+                <span></span><span></span><span></span> Bot is typing...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const nameSetup = document.getElementById('name-setup');
+        const chatInterface = document.getElementById('chat-interface');
+        const chatWindow = document.getElementById('chat-window');
+        const historyWindow = document.getElementById('history-window');
+        const historyList = document.getElementById('history-list');
+        const toggleBtn = document.getElementById('toggle-view');
+        const inputArea = document.getElementById('input-area');
+        const userInput = document.getElementById('user-input');
+        const nameInput = document.getElementById('name-input');
+        const greetingMessage = document.getElementById('greeting-message');
+        const typingIndicator = document.getElementById('typing-indicator');
+        let currentView = 'chat';
+        let symptomsChart, diseasesChart;
+        let historyData = [];
+        let userName = 'User';  // Default name
+
+        // Load user name from cookies on page load and decide initial view
+        window.onload = function() {
+            const name = getCookie('user_name');
+            if (name) {
+                userName = name;
+                updateGreeting();
+                showChatInterface();
+            } else {
+                showNameSetup();
+            }
+        };
+
+        // Helper to get cookie value
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Show name setup screen
+        function showNameSetup() {
+            nameSetup.style.display = 'flex';
+            chatInterface.style.display = 'none';
+        }
+
+        // Show chat interface
+        function showChatInterface() {
+            nameSetup.style.display = 'none';
+            chatInterface.style.display = 'flex';
+        }
+
+        // Update greeting with user name
+        function updateGreeting() {
+            greetingMessage.innerHTML = `Hello, ${userName}! Describe your symptoms (e.g., "I have fever and headache"), and I'll predict a possible disease with precautions.`;
+        }
+
+        // Set name via API and transition to chat
+        async function setName() {
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('Please enter a name.');
+                return;
+            }
+            try {
+                const response = await fetch('http://localhost:8000/set_name', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name }),
+                });
+                const data = await response.json();
+                userName = name;
+                updateGreeting();
+                nameInput.value = '';
+                showChatInterface();
+            } catch (error) {
+                console.error('Error setting name:', error);
+                alert('Failed to set name. Check console.');
+            }
+        }
+
+        // Toggle between chat and history
+        toggleBtn.addEventListener('click', () => {
+            if (currentView === 'chat') {
+                currentView = 'history';
+                chatWindow.style.display = 'none';
+                historyWindow.style.display = 'flex';
+                inputArea.style.display = 'none';
+                toggleBtn.textContent = 'Back to Chat';
+                loadHistory();
+            } else {
+                currentView = 'chat';
+                historyWindow.style.display = 'none';
+                chatWindow.style.display = 'flex';
+                inputArea.style.display = 'flex';
+                toggleBtn.textContent = 'View History';
+            }
+        });
+
+        // Add message to chat
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            messageDiv.innerHTML = content;
+            chatWindow.appendChild(messageDiv);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Show typing indicator
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+
+        // Send message with enhanced debugging
+        async function sendMessage() {
+            console.log('Send button clicked or Enter pressed');
+            const message = userInput.value.trim();
+            console.log('Message to send:', message);
+            if (!message) {
+                console.log('Message is empty, not sending');
+                return;
+            }
+            addMessage(message, true);
+            userInput.value = '';
+            showTyping();
+            try {
+                console.log('Sending API request to /chat');
+                const response = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message }),
+                });
+                console.log('API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('API response data:', data);
+                hideTyping();
+
+                // Additional try-catch for processing
+                try {
+                    if (data.error_message) {
+                        console.log('Displaying error message from API');
+                        addMessage(data.error_message, false);
+                    } else {
+                        console.log('Building bot reply');
+                        let botReply = `<strong>🩺 Predicted Disease:</strong> ${data.predicted_disease}<br>`;
+                        if (data.precautions && Array.isArray(data.precautions) && data.precautions.length > 0) {
+                            botReply += `<strong>💊 Precautions:</strong><ul>`;
+                            data.precautions.forEach(p => {
+                                botReply += `<li>${p}</li>`;
+                            });
+                            botReply += `</ul>`;
+                        }
+                        botReply += `<em>${data.disclaimer}</em>`;
+                        console.log('Bot reply built:', botReply);
+                        addMessage(botReply, false);
+                    }
+                } catch (processingError) {
+                    console.error('Error processing response data:', processingError);
+                    addMessage('❌ Error displaying response. Check console.', false);
+                }
+            } catch (error) {
+                console.error('Error in sendMessage:', error);
+                hideTyping();
+                addMessage('❌ Sorry, something went wrong. Please try again.', false);
+            }
+        }
+
+        // Load and display history
+        async function loadHistory() {
+            console.log('Loading history...');
+            try {
+                const response = await fetch('http://localhost:8000/history');
+                console.log('Fetch response status:', response.status);
+                const data = await response.json();
+                console.log('Raw history data:', data);
+                historyData = data.history || [];
+                historyList.innerHTML = '';
+                const dates = [];
+                const symptomCounts = [];
+                const diseaseCounts = {};
+
+                if (historyData.length > 0) {
+                    console.log('Processing', historyData.length, 'records');
+                    historyData.forEach(record => {
+                        console.log('Record:', record);
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+                        item.innerHTML = `
+                            <strong>Date:</strong> ${record.date}<br>
+                            <strong>Symptoms:</strong> ${record.symptoms.join(', ')}<br>
+                            <strong>Predicted Disease:</strong> ${record.predicted_disease}
+                        `;
+                        historyList.appendChild(item);
+
+                        dates.push(record.date.split(' ')[0]);
+                        symptomCounts.push(record.symptoms.length);
+                        diseaseCounts[record.predicted_disease] = (diseaseCounts[record.predicted_disease] || 0) + 1;
+                    });
+                    console.log('Chart data prepared:', { dates, symptomCounts, diseaseCounts });
+                } else {
+                    console.log('No history data');
+                    historyList.innerHTML = '<div class="no-data">No history available yet. Data is saved to CSV after each chat!</div>';
+                    dates.push('No Data');
+                    symptomCounts.push(0);
+                    diseaseCounts['No Data'] = 0;
+                }
+
+                renderCharts(dates, symptomCounts, diseaseCounts);
+            } catch (error) {
+                console.error('Error loading history:', error);
+                historyList.innerHTML = '<div class="no-data">Failed to load history. Check console for errors.</div>';
+            }
+        }
+
+        // Render charts
+        function renderCharts(dates, symptomCounts, diseaseCounts) {
+            console.log('Rendering charts with:', { dates, symptomCounts, diseaseCounts });
+            const ctx1 = document.getElementById('symptomsChart');
+            const ctx2 = document.getElementById('diseasesChart');
+            if (!ctx1 || !ctx2) {
+                console.error('Canvas elements not found');
+                return;
+            }
+
+            // Line chart for symptoms count over time
+            if (symptomsChart) symptomsChart.destroy();
+            symptomsChart = new Chart(ctx1.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Symptoms Count Over Time',
+                        data: symptomCounts,
+                        borderColor: '#4a90e2',
+                        fill: false,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Line chart for predicted diseases over time
+            const dateDiseaseMap = {};
+            historyData.forEach(record => {
+                const date = record.date.split(' ')[0];
+                if (!dateDiseaseMap[date]) dateDiseaseMap[date] = {};
+                dateDiseaseMap[date][record.predicted_disease] = (dateDiseaseMap[date][record.predicted_disease] || 0) + 1;
+            });
+
+            const allDiseases = [...new Set(historyData.map(r => r.predicted_disease))];
+            const datasets = allDiseases.map((disease, index) => ({
+                label: disease,
+                data: dates.map(date => dateDiseaseMap[date]?.[disease] || 0),
+                borderColor: `hsl(${index * 60}, 70%, 50%)`,
+                fill: false,
+            }));
+
+            if (diseasesChart) diseasesChart.destroy();
+            diseasesChart = new Chart(ctx2.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+            console.log('Charts rendered');
+        }
+
+        // Handle Enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+    </script>
+</body>
+</html>
