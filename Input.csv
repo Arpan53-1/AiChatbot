@@ -1,0 +1,9 @@
+symptoms,predicted_disease,date
+"cough,fatigue,fever",Bronchial Asthma,2026-02-13 17:30:53
+"cough,fever,headache",Paralysis (brain hemorrhage),2026-02-13 17:32:44
+"itching,nodal skin eruptions,skin rash",Fungal infection,2026-02-13 17:35:14
+"dehydration,sunken eyes,vomiting",Gastroenteritis,2026-02-13 17:36:10
+"breathlessness,chest pain,fatigue",Heart attack,2026-02-13 17:37:25
+"continuous sneezing,runny nose,watering from eyes",Allergy,2026-02-13 17:38:31
+"abdominal pain,dark urine,yellowing of eyes",Hepatitis D,2026-02-13 17:39:10
+"excessive hunger,polyuria,weight loss",Diabetes ,2026-02-13 17:39:50
