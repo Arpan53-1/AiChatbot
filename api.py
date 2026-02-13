@@ -85,10 +85,6 @@ def extract_symptoms(text: str) -> List[str]:
 
 
 def get_user_name(request: Request, response: Response) -> str:
-    # Modified: Return "Anonymous" if no cookie is set, instead of raising an exception.
-    # This makes /chat and /history not depend on /set_name.
-    #print(request)
-    #user_name = request.cookies.get("user_name")
     if not user_name:
         #user_name = "Anonymous"  # Default fallback
         logger.info("No user_name cookie found; using 'Anonymous'.")
@@ -118,6 +114,9 @@ def save_to_csv(csv_file: str, symptoms: List[str], disease: str):
 user_name="Anonymous"
 @app.post("/set_name", response_model=dict)
 def set_name(req: NameRequest, response: Response):
+    """
+        Setting name for the user in the application
+    """
     userName = req.name.strip()
     if not userName:
         raise HTTPException(status_code=400, detail="Name cannot be empty.")
@@ -133,6 +132,9 @@ def set_name(req: NameRequest, response: Response):
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, request: Request, response: Response) -> ChatResponse:
+    """
+        Response for each conversation with the application
+    """
     user_name = get_user_name(request, response)
     print(user_name)# Now uses default if not set
     csv_file = get_csv_file(user_name)
@@ -185,7 +187,10 @@ def chat(req: ChatRequest, request: Request, response: Response) -> ChatResponse
 
 @app.get("/history")
 def get_history(request: Request, response: Response):
-    user_name = get_user_name(request, response)  # Now uses default if not set
+    """
+        Response for history with the application
+    """
+    user_name = get_user_name(request, response)
     csv_file = get_csv_file(user_name)
     logger.info(f"Fetching history for user: {user_name}")
     try:
